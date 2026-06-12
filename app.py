@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from uuid import uuid4
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -22,8 +22,8 @@ def allowed_file(filename: str) -> bool:
 
 @app.route("/")
 def index():
-    return jsonify({"status": "ok", "message": "backend is running"})
-
+    #return jsonify({"status": "ok", "message": "backend is running"})
+    return render_template("index.html")
 
 @app.route("/upload", methods=["POST"])
 def upload_photo():
