@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>撮影サンプルアプリ</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #f7f7fb;
+      color: #222;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin: 0 0 8px;
+    }
+    p {
+      line-height: 1.7;
+      margin: 8px 0;
+    }
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #d9d9e3;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+    input[type="file"] {
+      width: 100%;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #111827;
+      color: #fff;
+      margin-top: 14px;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .preview-img, .result-img {
+      width: 100%;
+      border-radius: 16px;
+      margin-top: 12px;
+      display: block;
+    }
+    .muted {
+      color: #666;
+      font-size: 0.95rem;
+    }
+    .status {
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .success { color: #0f766e; }
+    .error { color: #b91c1c; }
+    code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>撮影サンプルアプリ</h1>
+      <p>スマホからカメラを起動して撮影し、画像をバックエンドへ送信するサンプルです。</p>
+      <p class="muted">最初に <code>API_BASE_URL</code> を Render のURLへ書き換えてください。</p>
+    </div>
+
+    <div class="card">
+      <label for="apiBaseUrl">バックエンドURL</label>
+      <input id="apiBaseUrl" type="text" value="https://your-render-service.onrender.com" />
+
+      <label for="photoInput" style="margin-top: 16px;">写真を撮影</label>
+      <input id="photoInput" type="file" accept="image/*" capture="environment" />
+
+      <div id="previewArea" style="display:none;">
+        <p>送信前プレビュー</p>
+        <img id="previewImage" class="preview-img" alt="プレビュー画像" />
+      </div>
+
+      <button id="uploadButton">撮影した写真を送信</button>
+      <p id="statusMessage" class="status"></p>
+    </div>
+
+    <div id="resultCard" class="card" style="display:none;">
+      <h2 style="margin-top:0;">送信結果</h2>
+      <p id="resultMessage"></p>
+      <p><strong>日時:</strong> <span id="resultDatetime"></span></p>
+      <img id="resultImage" class="result-img" alt="アップロード後の画像" />
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_API_BASE_URL = "https://your-render-service.onrender.com";
+
+    const apiBaseUrlInput = document.getElementById("apiBaseUrl");
+    const photoInput = document.getElementById("photoInput");
+    const previewArea = document.getElementById("previewArea");
+    const previewImage = document.getElementById("previewImage");
+    const uploadButton = document.getElementById("uploadButton");
+    const statusMessage = document.getElementById("statusMessage");
+    const resultCard = document.getElementById("resultCard");
+    const resultMessage = document.getElementById("resultMessage");
+    const resultDatetime = document.getElementById("resultDatetime");
+    const resultImage = document.getElementById("resultImage");
+
+    apiBaseUrlInput.value = DEFAULT_API_BASE_URL;
+
+    photoInput.addEventListener("change", () => {
+      const file = photoInput.files[0];
+      if (!file) {
+        previewArea.style.display = "none";
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      previewImage.src = objectUrl;
+      previewArea.style.display = "block";
+      statusMessage.textContent = "";
+      resultCard.style.display = "none";
+    });
+
+    uploadButton.addEventListener("click", async () => {
+      const file = photoInput.files[0];
+      const apiBaseUrl = apiBaseUrlInput.value.trim().replace(/\/$/, "");
+
+      if (!apiBaseUrl || apiBaseUrl === DEFAULT_API_BASE_URL) {
+        statusMessage.textContent = "バックエンドURLをRenderのURLに変更してください。";
+        statusMessage.className = "status error";
+        return;
+      }
+
+      if (!file) {
+        statusMessage.textContent = "先に写真を撮影してください。";
+        statusMessage.className = "status error";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("photo", file);
+
+      uploadButton.disabled = true;
+      statusMessage.textContent = "送信中です...";
+      statusMessage.className = "status";
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/upload`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        statusMessage.textContent = "送信できました。";
+        statusMessage.className = "status success";
+
+        resultMessage.textContent = data.message || "撮影した写真はこちらです";
+        resultDatetime.textContent = data.datetime || "-";
+        resultImage.src = data.image_url;
+        resultCard.style.display = "block";
+      } catch (error) {
+        statusMessage.textContent = `送信に失敗しました: ${error.message}`;
+        statusMessage.className = "status error";
+      } finally {
+        uploadButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
