@@ -153,11 +153,7 @@
       const file = photoInput.files[0];
       const apiBaseUrl = apiBaseUrlInput.value.trim().replace(/\/$/, "");
 
-      if (!apiBaseUrl || apiBaseUrl === DEFAULT_API_BASE_URL) {
-        statusMessage.textContent = "バックエンドURLをRenderのURLに変更してください。";
-        statusMessage.className = "status error";
-        return;
-      }
+      
 
       if (!file) {
         statusMessage.textContent = "先に写真を撮影してください。";
